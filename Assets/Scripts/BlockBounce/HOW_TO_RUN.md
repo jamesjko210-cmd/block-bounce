@@ -4,10 +4,20 @@
 1. Open the project in Unity 6 (`6000.4.8f1`).
 2. Open any scene (the default `Assets/Scenes/SampleScene.unity` is fine).
 3. Press **▶ Play**.
+4. A menu appears — choose **Play 2D** or **Play 3D**.
 
-The game spawns itself automatically — no GameObjects to wire up, no prefabs,
-no art assets to assign. A script (`BlockBounceGame`) creates the camera setup,
-generates all sprites at runtime, and runs the game.
+Nothing to wire up: a launcher (`BlockBounceLauncher`) spawns on Play and lets
+you pick a version. Both build their camera and visuals from code at runtime.
+
+## Two versions, one engine
+| Version | Renderer | File |
+|---------|----------|------|
+| **2D** | Sprites + orthographic camera | `BlockBounceGame.cs` |
+| **3D** | Cube/sphere meshes + perspective camera + light | `BlockBounceGame3D.cs` |
+
+Both drive the **same** game logic in `BBCore.cs`. To switch versions, stop Play
+and press Play again. The project's render pipeline now uses URP's 3D Universal
+Renderer (needed for lit 3D meshes); the 2D version still renders correctly under it.
 
 ## Controls
 - **← / →** move piece

@@ -17,14 +17,7 @@ using BlockBounce;
 
 public class BlockBounceGame : MonoBehaviour
 {
-    // ── press-Play bootstrap ────────────────────────────────────────────────
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Bootstrap()
-    {
-        if (FindFirstObjectByType<BlockBounceGame>() != null) return;
-        new GameObject("BlockBounceGame").AddComponent<BlockBounceGame>();
-    }
-
+    // Spawned by BlockBounceLauncher (which lets the player pick 2D or 3D).
     const int CW = BBState.CW, CH = BBState.CH;
 
     BBState s;
