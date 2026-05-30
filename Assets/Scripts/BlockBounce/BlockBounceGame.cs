@@ -76,17 +76,33 @@ public class BlockBounceGame : MonoBehaviour
         cam = Camera.main;
         if (cam == null)
         {
-            var go = new GameObject("Main Camera");
+            var go = new GameObject("BB Camera");
             go.tag = "MainCamera";
             cam = go.AddComponent<Camera>();
         }
+        // Make sure no OTHER camera composites over the board.
+        foreach (var c in Camera.allCameras) if (c != cam) c.enabled = false;
+
         cam.orthographic = true;
-        cam.orthographicSize = CH / 2f;          // shows 720px tall region
-        cam.transform.position = new Vector3(CW / 2f, CH / 2f, -10f);
         cam.transform.rotation = Quaternion.identity;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = Hex(0xFFF6EE);
         cam.nearClipPlane = 0.1f;
+        cam.farClipPlane = 100f;
+        FitCamera();
+    }
+
+    // Centre on the board and pick an orthographic size that fits the whole
+    // 480x720 play area at the current Game-view aspect (re-run each frame so it
+    // survives the view being resized).
+    void FitCamera()
+    {
+        if (cam == null) return;
+        float aspect = (float)Screen.width / Mathf.Max(1, Screen.height);
+        float sizeForHeight = CH / 2f;                          // 360
+        float sizeForWidth  = (CW / 2f) / Mathf.Max(0.0001f, aspect);
+        cam.orthographicSize = Mathf.Max(sizeForHeight, sizeForWidth) + 24f;
+        cam.transform.position = new Vector3(CW / 2f, CH / 2f, -10f);
     }
 
     void BuildSprites()
@@ -112,10 +128,25 @@ public class BlockBounceGame : MonoBehaviour
     }
 
     // ── main loop ───────────────────────────────────────────────────────────
+    float diagTimer;
+    string lastPhase = "";
+
     void Update()
     {
         if (s == null) return;
+        FitCamera();
         HandleInput();
+
+        // ── diagnostics (read these from the Console / Editor.log) ──
+        if (lastPhase != s.phase) { Debug.Log($"[BB] phase {lastPhase} -> {s.phase}"); lastPhase = s.phase; }
+        diagTimer += Time.deltaTime;
+        if (diagTimer >= 1f)
+        {
+            diagTimer = 0f;
+            Debug.Log($"[BB] screen={Screen.width}x{Screen.height} camPos={cam.transform.position} camSize={cam.orthographicSize:0.0} | " +
+                      $"board cols={s.cols} rows={s.rows} cell={s.cell} ox={s.ox} oy={s.oy} | " +
+                      $"phase={s.phase} score={s.score} pieceY={(s.piece != null ? s.piece.y.ToString() : "null")} balls={s.queuedBalls}");
+        }
 
         // feed mouse aim (engine clamps it to an upward angle)
         if (s.phase == "aim" && s.deployMode == "aim" && Mouse.current != null)
