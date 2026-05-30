@@ -1,0 +1,21 @@
+# Unity YAML assets — force LF, enable Unity's smart merge for scenes/prefabs
+*.cs        text diff=csharp
+*.unity     -text merge=unityyamlmerge
+*.prefab    -text merge=unityyamlmerge
+*.asset     -text merge=unityyamlmerge
+*.meta      -text merge=unityyamlmerge
+*.mat       -text merge=unityyamlmerge
+*.anim      -text merge=unityyamlmerge
+*.controller -text merge=unityyamlmerge
+
+# Binary assets — never try to diff/merge as text
+*.fbx       binary
+*.blend     binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.wav       binary
+*.mp3       binary
+*.ogg       binary
+*.ttf       binary
+*.otf       binary
