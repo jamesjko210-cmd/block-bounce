@@ -75,6 +75,7 @@ public class BlockBounceGame3D : MonoBehaviour
     }
 
     string lastPhase = "";
+    int softDownFrame = -10;
 
     void SetupCameraAndLight()
     {
@@ -153,10 +154,10 @@ public class BlockBounceGame3D : MonoBehaviour
         FitCamera();
         HandleInput();
 
-        if (s.phase == "aim" && s.deployMode == "aim" && Mouse.current != null)
+        if (s.phase == "aim" && s.deployMode == "aim" && Pointer.current != null)
         {
-            // project mouse onto the board plane (z = 0)
-            Ray ray = cam.ScreenPointToRay(Mouse.current.position.ReadValue());
+            // project pointer (mouse or touch) onto the board plane (z = 0)
+            Ray ray = cam.ScreenPointToRay(Pointer.current.position.ReadValue());
             if (Mathf.Abs(ray.direction.z) > 1e-4f)
             {
                 float t = -ray.origin.z / ray.direction.z;
@@ -196,11 +197,14 @@ public class BlockBounceGame3D : MonoBehaviour
                 if (k.rightArrowKey.wasPressedThisFrame) s.MoveRight();
                 if (k.upArrowKey.wasPressedThisFrame)    s.TryRotate();
                 if (k.spaceKey.wasPressedThisFrame)      s.HardDrop();
-                s.SoftDrop(k.downArrowKey.isPressed);
             }
         }
-        var m = Mouse.current;
-        if (m != null && m.leftButton.wasPressedThisFrame && s.phase == "aim" && s.deployMode == "aim")
+        bool kSoft = k != null && k.downArrowKey.isPressed;
+        bool tSoft = Time.frameCount - softDownFrame <= 1;
+        if (s.phase == "play") s.SoftDrop(kSoft || tSoft);
+
+        var pt = Pointer.current;
+        if (pt != null && pt.press.wasReleasedThisFrame && s.phase == "aim" && s.deployMode == "aim")
             s.ClickLaunch();
     }
 
@@ -429,8 +433,9 @@ public class BlockBounceGame3D : MonoBehaviour
         if (GUI.Button(new Rect(Screen.width - 94, 14, 80, 28), "Quit")) { s.NewGame(true, 50); }
 
         DrawLeaderboard();
-        GUI.Label(new Rect(16, Screen.height - 28, Screen.width - 32, 20),
-            "←/→ move   ↑ rotate   ↓ soft drop   Space hard drop   P pause   Click launch",
+        DrawTouchControls();
+        GUI.Label(new Rect(16, Screen.height - 24, Screen.width - 32, 20),
+            "Keys: ←/→ · ↑ rotate · ↓ soft · Space hard · P pause · Click launch    —    Touch: buttons below + drag/tap to aim",
             new GUIStyle(stLabel){ normal = { textColor = Hex(0xCFC8E0) } });
 
         switch (s.phase)
@@ -450,6 +455,21 @@ public class BlockBounceGame3D : MonoBehaviour
         GUI.Box(new Rect(x, y, 120, 50), GUIContent.none);
         GUI.Label(new Rect(x + 10, y + 6, 110, 16), label, stLabel);
         GUI.Label(new Rect(x + 10, y + 18, 110, 30), value, new GUIStyle(stValue) { normal = { textColor = Hex(color) } });
+    }
+
+    void DrawTouchControls()
+    {
+        if (s.phase != "play") return;
+        float bh = 64, gap = 10, y = Screen.height - bh - 44;
+        var arrow = new GUIStyle(GUI.skin.button) { fontSize = 26, fontStyle = FontStyle.Bold };
+        var word  = new GUIStyle(GUI.skin.button) { fontSize = 15, fontStyle = FontStyle.Bold };
+        if (GUI.Button(new Rect(16, y, bh, bh), "◀", arrow)) s.MoveLeft();
+        if (GUI.Button(new Rect(16 + bh + gap, y, bh, bh), "▶", arrow)) s.MoveRight();
+        float wbtn = 84;
+        float rx = Screen.width - (wbtn * 3 + gap * 2) - 16;
+        if (GUI.Button(new Rect(rx, y, wbtn, bh), "Rotate", word)) s.TryRotate();
+        if (GUI.RepeatButton(new Rect(rx + wbtn + gap, y, wbtn, bh), "Soft", word)) softDownFrame = Time.frameCount;
+        if (GUI.Button(new Rect(rx + (wbtn + gap) * 2, y, wbtn, bh), "Drop", word)) s.HardDrop();
     }
 
     void DrawLeaderboard()

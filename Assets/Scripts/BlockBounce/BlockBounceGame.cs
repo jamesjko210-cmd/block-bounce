@@ -125,6 +125,7 @@ public class BlockBounceGame : MonoBehaviour
     // ── main loop ───────────────────────────────────────────────────────────
     float diagTimer;
     string lastPhase = "";
+    int softDownFrame = -10;   // set while the on-screen soft-drop button is held
 
     void Update()
     {
@@ -149,10 +150,10 @@ public class BlockBounceGame : MonoBehaviour
                       $"phase={s.phase} score={s.score} pieceY={(s.piece != null ? s.piece.y.ToString() : "null")} balls={s.queuedBalls}");
         }
 
-        // feed mouse aim (engine clamps it to an upward angle)
-        if (s.phase == "aim" && s.deployMode == "aim" && Mouse.current != null)
+        // feed aim from pointer (mouse hover OR touch drag); engine clamps the angle
+        if (s.phase == "aim" && s.deployMode == "aim" && Pointer.current != null)
         {
-            Vector3 w = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            Vector3 w = cam.ScreenToWorldPoint(Pointer.current.position.ReadValue());
             s.aimX = w.x;
             s.aimY = CH - w.y;
         }
@@ -182,11 +183,16 @@ public class BlockBounceGame : MonoBehaviour
                 if (k.rightArrowKey.wasPressedThisFrame) s.MoveRight();
                 if (k.upArrowKey.wasPressedThisFrame)    s.TryRotate();
                 if (k.spaceKey.wasPressedThisFrame)      s.HardDrop();
-                s.SoftDrop(k.downArrowKey.isPressed);
             }
         }
-        var m = Mouse.current;
-        if (m != null && m.leftButton.wasPressedThisFrame && s.phase == "aim" && s.deployMode == "aim")
+        // soft drop: keyboard OR on-screen touch button (works with no keyboard)
+        bool kSoft = k != null && k.downArrowKey.isPressed;
+        bool tSoft = Time.frameCount - softDownFrame <= 1;
+        if (s.phase == "play") s.SoftDrop(kSoft || tSoft);
+
+        // launch on pointer release (a mouse click, or lifting a finger after aiming)
+        var pt = Pointer.current;
+        if (pt != null && pt.press.wasReleasedThisFrame && s.phase == "aim" && s.deployMode == "aim")
             s.ClickLaunch();
     }
 
@@ -439,9 +445,12 @@ public class BlockBounceGame : MonoBehaviour
         // leaderboard (right side)
         DrawLeaderboard();
 
+        // on-screen touch controls (also clickable with a mouse)
+        DrawTouchControls();
+
         // controls hint (bottom)
-        GUI.Label(new Rect(16, Screen.height - 28, Screen.width - 32, 20),
-            "←/→ move   ↑ rotate   ↓ soft drop   Space hard drop   P pause   Click launch", stLabel);
+        GUI.Label(new Rect(16, Screen.height - 24, Screen.width - 32, 20),
+            "Keys: ←/→ move · ↑ rotate · ↓ soft · Space hard · P pause · Click launch    —    Touch: buttons below + drag/tap to aim", stLabel);
 
         // overlays
         switch (s.phase)
@@ -462,6 +471,26 @@ public class BlockBounceGame : MonoBehaviour
         GUI.Label(new Rect(x + 10, y + 6, 110, 16), label, stLabel);
         var st = new GUIStyle(stValue) { normal = { textColor = Hex(color) } };
         GUI.Label(new Rect(x + 10, y + 18, 110, 30), value, st);
+    }
+
+    // Big on-screen buttons for touch (iPhone) — also work with a mouse.
+    void DrawTouchControls()
+    {
+        if (s.phase != "play") return;
+        float bh = 64, gap = 10, y = Screen.height - bh - 44;
+        var arrow = new GUIStyle(GUI.skin.button) { fontSize = 26, fontStyle = FontStyle.Bold };
+        var word  = new GUIStyle(GUI.skin.button) { fontSize = 15, fontStyle = FontStyle.Bold };
+
+        // left cluster: move
+        if (GUI.Button(new Rect(16, y, bh, bh), "◀", arrow)) s.MoveLeft();
+        if (GUI.Button(new Rect(16 + bh + gap, y, bh, bh), "▶", arrow)) s.MoveRight();
+
+        // right cluster: rotate / soft / hard
+        float wbtn = 84;
+        float rx = Screen.width - (wbtn * 3 + gap * 2) - 16;
+        if (GUI.Button(new Rect(rx, y, wbtn, bh), "Rotate", word)) s.TryRotate();
+        if (GUI.RepeatButton(new Rect(rx + wbtn + gap, y, wbtn, bh), "Soft", word)) softDownFrame = Time.frameCount;
+        if (GUI.Button(new Rect(rx + (wbtn + gap) * 2, y, wbtn, bh), "Drop", word)) s.HardDrop();
     }
 
     void DrawLeaderboard()
