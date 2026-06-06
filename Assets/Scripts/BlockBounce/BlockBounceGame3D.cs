@@ -70,7 +70,11 @@ public class BlockBounceGame3D : MonoBehaviour
 
         s = new BBState();
         s.NewGame(true, 50);
+
+        LeaderboardService.Fetch();
     }
+
+    string lastPhase = "";
 
     void SetupCameraAndLight()
     {
@@ -168,6 +172,13 @@ public class BlockBounceGame3D : MonoBehaviour
         if ((s.phase == "demoDone" || s.phase == "over" || s.phase == "won") && s.score > best)
         {
             best = s.score; PlayerPrefs.SetInt("bb_best", best);
+        }
+
+        if (lastPhase != s.phase)
+        {
+            if (s.phase == "demoDone" || s.phase == "over" || s.phase == "won")
+                LeaderboardService.Submit(string.IsNullOrEmpty(playerName) ? "You" : playerName, s.score, s.level + 1);
+            lastPhase = s.phase;
         }
 
         Render();
@@ -444,19 +455,43 @@ public class BlockBounceGame3D : MonoBehaviour
     void DrawLeaderboard()
     {
         float x = Screen.width - 220, y = 64, w = 206;
-        GUI.Box(new Rect(x, y, w, 360), GUIContent.none);
-        GUI.Label(new Rect(x + 12, y + 8, w - 20, 20), "LEADERBOARD  ● LIVE", new GUIStyle(stLabel){ normal = { textColor = Hex(0xCFC8E0) } });
-        var list = BBData.BuildLeaderboard(string.IsNullOrEmpty(playerName) ? "You" : playerName, Mathf.Max(best, s.score));
-        for (int i = 0; i < list.Count; i++)
+        GUI.Box(new Rect(x, y, w, 372), GUIContent.none);
+        bool live = LeaderboardService.Configured && LeaderboardService.Loaded;
+        var head = new GUIStyle(stLabel) { normal = { textColor = Hex(0xCFC8E0) } };
+        GUI.Label(new Rect(x + 12, y + 8, w - 20, 20), live ? "LEADERBOARD  ● LIVE" : "LEADERBOARD  (local)", head);
+        var lvlStyle = new GUIStyle(stLb) { fontSize = 10, normal = { textColor = Hex(0xA89CC1) } };
+
+        if (live)
         {
-            var row = list[i];
-            float ry = y + 34 + i * 30;
-            var style = new GUIStyle(stLb);
-            if (row.me) style.normal.textColor = Hex(0xFF6B9D);
-            if (i < 3) style.fontStyle = FontStyle.Bold;
-            GUI.Label(new Rect(x + 12, ry, 24, 24), (i + 1).ToString(), style);
-            GUI.Label(new Rect(x + 40, ry, 110, 24), row.name + (row.me ? "  (YOU)" : ""), style);
-            GUI.Label(new Rect(x + w - 64, ry, 60, 24), row.score.ToString("N0"), style);
+            var top = LeaderboardService.Top;
+            for (int i = 0; i < top.Count && i < 10; i++)
+            {
+                var e = top[i];
+                bool me = e.name == playerName;
+                float ry = y + 34 + i * 32;
+                var style = new GUIStyle(stLb);
+                if (me) style.normal.textColor = Hex(0xFF6B9D);
+                if (i < 3) style.fontStyle = FontStyle.Bold;
+                GUI.Label(new Rect(x + 12, ry, 22, 24), (i + 1).ToString(), style);
+                GUI.Label(new Rect(x + 36, ry, 92, 24), e.name + (me ? " (YOU)" : ""), style);
+                GUI.Label(new Rect(x + 130, ry, 28, 24), "L" + e.level, lvlStyle);
+                GUI.Label(new Rect(x + w - 60, ry, 56, 24), e.score.ToString("N0"), style);
+            }
+        }
+        else
+        {
+            var list = BBData.BuildLeaderboard(string.IsNullOrEmpty(playerName) ? "You" : playerName, Mathf.Max(best, s.score));
+            for (int i = 0; i < list.Count; i++)
+            {
+                var row = list[i];
+                float ry = y + 34 + i * 32;
+                var style = new GUIStyle(stLb);
+                if (row.me) style.normal.textColor = Hex(0xFF6B9D);
+                if (i < 3) style.fontStyle = FontStyle.Bold;
+                GUI.Label(new Rect(x + 12, ry, 22, 24), (i + 1).ToString(), style);
+                GUI.Label(new Rect(x + 36, ry, 110, 24), row.name + (row.me ? " (YOU)" : ""), style);
+                GUI.Label(new Rect(x + w - 60, ry, 56, 24), row.score.ToString("N0"), style);
+            }
         }
     }
 
