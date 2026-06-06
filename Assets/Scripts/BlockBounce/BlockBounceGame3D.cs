@@ -47,6 +47,10 @@ public class BlockBounceGame3D : MonoBehaviour
         playerName = PlayerPrefs.GetString("bb_name", "You");
         best = PlayerPrefs.GetInt("bb_best", 0);
 
+        // Stable 60fps so per-frame physics matches on any refresh rate (60/120Hz).
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 60;
+
         mpb = new MaterialPropertyBlock();
         var sh = Shader.Find("Universal Render Pipeline/Lit");
         if (sh == null) sh = Shader.Find("Standard");

@@ -49,6 +49,12 @@ public class BlockBounceGame : MonoBehaviour
         playerName = PlayerPrefs.GetString("bb_name", "You");
         best = PlayerPrefs.GetInt("bb_best", 0);
 
+        // Stable 60fps so the per-frame physics feels the same on any refresh
+        // rate (60Hz or 120Hz ProMotion). Layout adapts to any screen via the
+        // aspect-aware camera fit + DPI-scaled HUD — no device-specific sizing.
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 60;
+
         BuildSprites();
         SetupCamera();
 
