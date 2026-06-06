@@ -126,6 +126,7 @@ public class BlockBounceGame : MonoBehaviour
     float diagTimer;
     string lastPhase = "";
     int softDownFrame = -10;   // set while the on-screen soft-drop button is held
+    float GW, GH;              // logical GUI size (Screen size / DPI scale, for mobile)
 
     void Update()
     {
@@ -145,7 +146,7 @@ public class BlockBounceGame : MonoBehaviour
         if (diagTimer >= 1f)
         {
             diagTimer = 0f;
-            Debug.Log($"[BB] screen={Screen.width}x{Screen.height} camPos={cam.transform.position} camSize={cam.orthographicSize:0.0} | " +
+            Debug.Log($"[BB] screen={GW}x{GH} camPos={cam.transform.position} camSize={cam.orthographicSize:0.0} | " +
                       $"board cols={s.cols} rows={s.rows} cell={s.cell} ox={s.ox} oy={s.oy} | " +
                       $"phase={s.phase} score={s.score} pieceY={(s.piece != null ? s.piece.y.ToString() : "null")} balls={s.queuedBalls}");
         }
@@ -413,6 +414,12 @@ public class BlockBounceGame : MonoBehaviour
         if (s == null) return;
         EnsureStyles();
 
+        // Scale the whole HUD up on high-DPI touch devices (mobile only; desktop unchanged).
+        float guiScale = Application.isMobilePlatform ? Mathf.Max(1f, Screen.dpi / 160f) : 1f;
+        GUI.matrix = Matrix4x4.Scale(new Vector3(guiScale, guiScale, 1f));
+        GW = GW / guiScale;
+        GH = GH / guiScale;
+
         var L = s.CurLevel;
 
         // top-left status
@@ -439,8 +446,8 @@ public class BlockBounceGame : MonoBehaviour
         GUI.Label(new Rect(16, 132, 520, 20), "STAGE GOAL: " + goal, stLabel);
 
         // top-right buttons
-        if (GUI.Button(new Rect(Screen.width - 180, 14, 80, 28), s.phase == "paused" ? "Resume" : "Pause")) s.TogglePause();
-        if (GUI.Button(new Rect(Screen.width - 94, 14, 80, 28), "Quit")) { s.NewGame(true, 50); editingName = false; }
+        if (GUI.Button(new Rect(GW - 180, 14, 80, 28), s.phase == "paused" ? "Resume" : "Pause")) s.TogglePause();
+        if (GUI.Button(new Rect(GW - 94, 14, 80, 28), "Quit")) { s.NewGame(true, 50); editingName = false; }
 
         // leaderboard (right side)
         DrawLeaderboard();
@@ -449,7 +456,7 @@ public class BlockBounceGame : MonoBehaviour
         DrawTouchControls();
 
         // controls hint (bottom)
-        GUI.Label(new Rect(16, Screen.height - 24, Screen.width - 32, 20),
+        GUI.Label(new Rect(16, GH - 24, GW - 32, 20),
             "Keys: ←/→ move · ↑ rotate · ↓ soft · Space hard · P pause · Click launch    —    Touch: buttons below + drag/tap to aim", stLabel);
 
         // overlays
@@ -477,7 +484,7 @@ public class BlockBounceGame : MonoBehaviour
     void DrawTouchControls()
     {
         if (s.phase != "play") return;
-        float bh = 64, gap = 10, y = Screen.height - bh - 44;
+        float bh = 64, gap = 10, y = GH - bh - 44;
         var arrow = new GUIStyle(GUI.skin.button) { fontSize = 26, fontStyle = FontStyle.Bold };
         var word  = new GUIStyle(GUI.skin.button) { fontSize = 15, fontStyle = FontStyle.Bold };
 
@@ -487,7 +494,7 @@ public class BlockBounceGame : MonoBehaviour
 
         // right cluster: rotate / soft / hard
         float wbtn = 84;
-        float rx = Screen.width - (wbtn * 3 + gap * 2) - 16;
+        float rx = GW - (wbtn * 3 + gap * 2) - 16;
         if (GUI.Button(new Rect(rx, y, wbtn, bh), "Rotate", word)) s.TryRotate();
         if (GUI.RepeatButton(new Rect(rx + wbtn + gap, y, wbtn, bh), "Soft", word)) softDownFrame = Time.frameCount;
         if (GUI.Button(new Rect(rx + (wbtn + gap) * 2, y, wbtn, bh), "Drop", word)) s.HardDrop();
@@ -495,7 +502,7 @@ public class BlockBounceGame : MonoBehaviour
 
     void DrawLeaderboard()
     {
-        float x = Screen.width - 220, y = 90, w = 206;
+        float x = GW - 220, y = 90, w = 206;
         GUI.Box(new Rect(x, y, w, 372), GUIContent.none);
         bool live = LeaderboardService.Configured && LeaderboardService.Loaded;
         GUI.Label(new Rect(x + 12, y + 8, w - 20, 20), live ? "LEADERBOARD  ● LIVE" : "LEADERBOARD  (local)", stLabel);
@@ -536,12 +543,12 @@ public class BlockBounceGame : MonoBehaviour
     }
 
     // modal frame helper
-    Rect ModalRect() => new Rect(Screen.width / 2f - 190, Screen.height / 2f - 130, 380, 260);
+    Rect ModalRect() => new Rect(GW / 2f - 190, GH / 2f - 130, 380, 260);
 
     void ModalBackground()
     {
         var c = GUI.color; GUI.color = new Color(0.17f, 0.12f, 0.30f, 0.46f);
-        GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+        GUI.DrawTexture(new Rect(0, 0, GW, GH), Texture2D.whiteTexture);
         GUI.color = c;
     }
 
@@ -627,7 +634,7 @@ public class BlockBounceGame : MonoBehaviour
     void DrawDeployPicker()
     {
         ModalBackground();
-        var r = new Rect(Screen.width / 2f - 190, Screen.height / 2f - 110, 380, 220);
+        var r = new Rect(GW / 2f - 190, GH / 2f - 110, 380, 220);
         GUI.Box(r, GUIContent.none);
         GUI.Label(new Rect(r.x, r.y + 16, r.width, 28), "Deploy your balls", stModalTitle);
         GUI.Label(new Rect(r.x + 24, r.y + 50, r.width - 48, 24), $"{s.queuedBalls} balls ready · pick how to launch", stBody);
@@ -637,8 +644,8 @@ public class BlockBounceGame : MonoBehaviour
 
     void DrawAimHint()
     {
-        GUI.Label(new Rect(Screen.width / 2f - 160, 100, 320, 24), "Move mouse to aim · Click to launch", stModalTitle);
-        if (GUI.Button(new Rect(Screen.width / 2f - 90, Screen.height - 120, 180, 30), "↻ Switch to Random Spray")) s.ChooseRandom();
+        GUI.Label(new Rect(GW / 2f - 160, 100, 320, 24), "Move mouse to aim · Click to launch", stModalTitle);
+        if (GUI.Button(new Rect(GW / 2f - 90, GH - 120, 180, 30), "↻ Switch to Random Spray")) s.ChooseRandom();
     }
 
     // ── texture / colour utilities ──────────────────────────────────────────
