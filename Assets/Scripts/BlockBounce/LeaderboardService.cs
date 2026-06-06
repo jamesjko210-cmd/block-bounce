@@ -19,9 +19,9 @@ public static class LeaderboardService
     // ════════════════════ PASTE YOUR VALUES HERE ════════════════════
     // 1) Deploy the Apps Script (Leaderboard/AppsScript.gs) as a Web App and
     //    paste its /exec URL here.
-    public const string EndpointUrl = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+    public const string EndpointUrl = "https://script.google.com/macros/s/AKfycbwSyVAAprc7cT11elUU6sxX6yed_edtJmGot7bwSjK8a1R07K4csttP2HoCJESK4ahY/exec";
     // 2) Must match the SECRET in the Apps Script.
-    public const string SecretToken = "CHANGE_ME_TOKEN";
+    public const string SecretToken = "Block_bounce_token";
     // ═════════════════════════════════════════════════════════════════
 
     [Serializable] public struct Entry { public string name; public int score; public int level; }
