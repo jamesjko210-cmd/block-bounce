@@ -81,6 +81,7 @@ public class BlockBounceGame3D : MonoBehaviour
     string lastPhase = "";
     int softDownFrame = -10;
     float GW, GH;   // logical GUI size (Screen size / DPI scale, for mobile)
+    readonly TouchPad pad = new TouchPad();   // responsive, drag-to-move touch buttons
 
     void SetupCameraAndLight()
     {
@@ -173,7 +174,7 @@ public class BlockBounceGame3D : MonoBehaviour
         }
 
         double dt = Mathf.Min(48f, Time.deltaTime * 1000f);
-        s.Step(dt);
+        if (!pad.EditMode) s.Step(dt);   // freeze while editing button layout
 
         if ((s.phase == "demoDone" || s.phase == "over" || s.phase == "won") && s.score > best)
         {
@@ -444,9 +445,18 @@ public class BlockBounceGame3D : MonoBehaviour
         if (GUI.Button(new Rect(GW - 94, 14, 80, 28), "Quit")) { s.NewGame(true, 50); }
 
         DrawLeaderboard();
-        DrawTouchControls();
+        if (s.phase == "play")
+        {
+            pad.Draw();
+            if (pad.Left) s.MoveLeft();
+            if (pad.Right) s.MoveRight();
+            if (pad.Rotate) s.TryRotate();
+            if (pad.Drop) s.HardDrop();
+            if (pad.SoftHeld) softDownFrame = Time.frameCount;
+        }
+        else pad.CancelEdit();   // never leave edit mode stuck on outside of play
         GUI.Label(new Rect(16, GH - 24, GW - 32, 20),
-            "Keys: ←/→ · ↑ rotate · ↓ soft · Space hard · P pause · Click launch    —    Touch: buttons below + drag/tap to aim",
+            "Keys: ←/→ · ↑ rotate · ↓ soft · Space hard · P pause · Click launch    —    Touch: on-screen buttons (“Move buttons” to rearrange) + drag/tap to aim",
             new GUIStyle(stLabel){ normal = { textColor = Hex(0xCFC8E0) } });
 
         switch (s.phase)
@@ -468,20 +478,6 @@ public class BlockBounceGame3D : MonoBehaviour
         GUI.Label(new Rect(x + 10, y + 18, 110, 30), value, new GUIStyle(stValue) { normal = { textColor = Hex(color) } });
     }
 
-    void DrawTouchControls()
-    {
-        if (s.phase != "play") return;
-        float bh = 64, gap = 10, y = GH - bh - 44;
-        var arrow = new GUIStyle(GUI.skin.button) { fontSize = 26, fontStyle = FontStyle.Bold };
-        var word  = new GUIStyle(GUI.skin.button) { fontSize = 15, fontStyle = FontStyle.Bold };
-        if (GUI.Button(new Rect(16, y, bh, bh), "◀", arrow)) s.MoveLeft();
-        if (GUI.Button(new Rect(16 + bh + gap, y, bh, bh), "▶", arrow)) s.MoveRight();
-        float wbtn = 84;
-        float rx = GW - (wbtn * 3 + gap * 2) - 16;
-        if (GUI.Button(new Rect(rx, y, wbtn, bh), "Rotate", word)) s.TryRotate();
-        if (GUI.RepeatButton(new Rect(rx + wbtn + gap, y, wbtn, bh), "Soft", word)) softDownFrame = Time.frameCount;
-        if (GUI.Button(new Rect(rx + (wbtn + gap) * 2, y, wbtn, bh), "Drop", word)) s.HardDrop();
-    }
 
     void DrawLeaderboard()
     {

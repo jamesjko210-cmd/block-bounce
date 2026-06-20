@@ -133,6 +133,7 @@ public class BlockBounceGame : MonoBehaviour
     string lastPhase = "";
     int softDownFrame = -10;   // set while the on-screen soft-drop button is held
     float GW, GH;              // logical GUI size (Screen size / DPI scale, for mobile)
+    readonly TouchPad pad = new TouchPad();   // responsive, drag-to-move touch buttons
 
     void Update()
     {
@@ -166,7 +167,7 @@ public class BlockBounceGame : MonoBehaviour
         }
 
         double dt = Mathf.Min(48f, Time.deltaTime * 1000f);
-        s.Step(dt);
+        if (!pad.EditMode) s.Step(dt);   // freeze the falling piece while editing button layout
 
         // persist best after an end state
         if ((s.phase == "demoDone" || s.phase == "over" || s.phase == "won") && s.score > best)
@@ -458,12 +459,21 @@ public class BlockBounceGame : MonoBehaviour
         // leaderboard (right side)
         DrawLeaderboard();
 
-        // on-screen touch controls (also clickable with a mouse)
-        DrawTouchControls();
+        // on-screen touch controls (responsive + drag-to-move). Only while playing.
+        if (s.phase == "play")
+        {
+            pad.Draw();
+            if (pad.Left) s.MoveLeft();
+            if (pad.Right) s.MoveRight();
+            if (pad.Rotate) s.TryRotate();
+            if (pad.Drop) s.HardDrop();
+            if (pad.SoftHeld) softDownFrame = Time.frameCount;
+        }
+        else pad.CancelEdit();   // never leave edit mode stuck on outside of play
 
         // controls hint (bottom)
         GUI.Label(new Rect(16, GH - 24, GW - 32, 20),
-            "Keys: ←/→ move · ↑ rotate · ↓ soft · Space hard · P pause · Click launch    —    Touch: buttons below + drag/tap to aim", stLabel);
+            "Keys: ←/→ move · ↑ rotate · ↓ soft · Space hard · P pause · Click launch    —    Touch: on-screen buttons (“Move buttons” to rearrange) + drag/tap to aim", stLabel);
 
         // overlays
         switch (s.phase)
@@ -486,25 +496,6 @@ public class BlockBounceGame : MonoBehaviour
         GUI.Label(new Rect(x + 10, y + 18, 110, 30), value, st);
     }
 
-    // Big on-screen buttons for touch (iPhone) — also work with a mouse.
-    void DrawTouchControls()
-    {
-        if (s.phase != "play") return;
-        float bh = 64, gap = 10, y = GH - bh - 44;
-        var arrow = new GUIStyle(GUI.skin.button) { fontSize = 26, fontStyle = FontStyle.Bold };
-        var word  = new GUIStyle(GUI.skin.button) { fontSize = 15, fontStyle = FontStyle.Bold };
-
-        // left cluster: move
-        if (GUI.Button(new Rect(16, y, bh, bh), "◀", arrow)) s.MoveLeft();
-        if (GUI.Button(new Rect(16 + bh + gap, y, bh, bh), "▶", arrow)) s.MoveRight();
-
-        // right cluster: rotate / soft / hard
-        float wbtn = 84;
-        float rx = GW - (wbtn * 3 + gap * 2) - 16;
-        if (GUI.Button(new Rect(rx, y, wbtn, bh), "Rotate", word)) s.TryRotate();
-        if (GUI.RepeatButton(new Rect(rx + wbtn + gap, y, wbtn, bh), "Soft", word)) softDownFrame = Time.frameCount;
-        if (GUI.Button(new Rect(rx + (wbtn + gap) * 2, y, wbtn, bh), "Drop", word)) s.HardDrop();
-    }
 
     void DrawLeaderboard()
     {
