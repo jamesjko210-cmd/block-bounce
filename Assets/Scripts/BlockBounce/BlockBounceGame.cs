@@ -198,9 +198,10 @@ public class BlockBounceGame : MonoBehaviour
         bool tSoft = Time.frameCount - softDownFrame <= 1;
         if (s.phase == "play") s.SoftDrop(kSoft || tSoft);
 
-        // launch on pointer release (a mouse click, or lifting a finger after aiming)
+        // launch on press (not release) so the shot uses the angle you were just
+        // looking at, not wherever the mouse drifted to by the time you let go
         var pt = Pointer.current;
-        if (pt != null && pt.press.wasReleasedThisFrame && s.phase == "aim" && s.deployMode == "aim")
+        if (pt != null && pt.press.wasPressedThisFrame && s.phase == "aim" && s.deployMode == "aim")
             s.ClickLaunch();
     }
 
@@ -406,10 +407,10 @@ public class BlockBounceGame : MonoBehaviour
     void EnsureStyles()
     {
         if (stLabel != null) return;
-        stLabel = new GUIStyle(GUI.skin.label) { fontSize = 11, normal = { textColor = Hex(0x6F628F) } };
-        stValue = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, normal = { textColor = Hex(0x2B1F4D) } };
-        stTitle = new GUIStyle(GUI.skin.label) { fontSize = 20, fontStyle = FontStyle.Bold, normal = { textColor = Hex(0x2B1F4D) } };
-        stPill  = new GUIStyle(GUI.skin.label) { fontSize = 12, fontStyle = FontStyle.Bold, normal = { textColor = Hex(0xFF4E78) } };
+        stLabel = new GUIStyle(GUI.skin.label) { fontSize = 15, normal = { textColor = Hex(0x6F628F) } };
+        stValue = new GUIStyle(GUI.skin.label) { fontSize = 30, fontStyle = FontStyle.Bold, normal = { textColor = Hex(0x2B1F4D) } };
+        stTitle = new GUIStyle(GUI.skin.label) { fontSize = 28, fontStyle = FontStyle.Bold, normal = { textColor = Hex(0x2B1F4D) } };
+        stPill  = new GUIStyle(GUI.skin.label) { fontSize = 16, fontStyle = FontStyle.Bold, normal = { textColor = Hex(0xFF4E78) } };
         stModalTitle = new GUIStyle(GUI.skin.label) { fontSize = 24, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = Hex(0x2B1F4D) } };
         stBig   = new GUIStyle(GUI.skin.label) { fontSize = 44, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, normal = { textColor = Hex(0xFF4E78) } };
         stBody  = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.MiddleCenter, wordWrap = true, normal = { textColor = Hex(0x6F628F) } };
@@ -430,27 +431,27 @@ public class BlockBounceGame : MonoBehaviour
         var L = s.CurLevel;
 
         // top-left status
-        GUILayout.BeginArea(new Rect(16, 12, 520, 60));
+        GUILayout.BeginArea(new Rect(16, 10, Mathf.Min(GW - 32, 640), 44));
         GUILayout.BeginHorizontal();
         GUILayout.Label("Block Bounce", stTitle);
-        GUILayout.Space(10);
+        GUILayout.Space(14);
         GUILayout.Label(s.demoMode ? "DEMO ROUND" : "LIVE MATCH", stPill);
-        GUILayout.Space(10);
+        GUILayout.Space(14);
         GUILayout.Label($"Level {(s.level + 1):00} · {L.name}", stLabel);
         GUILayout.EndHorizontal();
         GUILayout.EndArea();
 
         // stat row
-        DrawStat(16,  74, "SCORE", s.score.ToString(), 0xFF4E78);
-        DrawStat(146, 74, "BALLS", s.BallsDisplay.ToString(), 0x6B5BFF);
-        DrawStat(276, 74, "ROWS",  s.totalLines.ToString(), 0x11A877);
-        DrawStat(406, 74, "LEVEL", (s.level + 1).ToString("00"), 0x2B1F4D);
+        DrawStat(16,  60, "SCORE", s.score.ToString(), 0xFF4E78);
+        DrawStat(150, 60, "BALLS", s.BallsDisplay.ToString(), 0x6B5BFF);
+        DrawStat(284, 60, "ROWS",  s.totalLines.ToString(), 0x11A877);
+        DrawStat(418, 60, "LEVEL", (s.level + 1).ToString("00"), 0x2B1F4D);
 
         // goal text
         string goal = s.demoMode
             ? $"Reach {s.demoTarget} pts · {Mathf.Min(s.score, s.demoTarget)}/{s.demoTarget}"
             : $"Clear {L.lines} rows · {s.levelLines}/{L.lines}";
-        GUI.Label(new Rect(16, 132, 520, 20), "STAGE GOAL: " + goal, stLabel);
+        GUI.Label(new Rect(16, 124, 600, 26), "STAGE GOAL: " + goal, new GUIStyle(stLabel) { fontStyle = FontStyle.Bold });
 
         // top-right buttons
         if (GUI.Button(new Rect(GW - 180, 14, 80, 28), s.phase == "paused" ? "Resume" : "Pause")) s.TogglePause();
@@ -490,10 +491,10 @@ public class BlockBounceGame : MonoBehaviour
 
     void DrawStat(float x, float y, string label, string value, int color)
     {
-        GUI.Box(new Rect(x, y, 120, 50), GUIContent.none);
-        GUI.Label(new Rect(x + 10, y + 6, 110, 16), label, stLabel);
+        GUI.Box(new Rect(x, y, 128, 62), GUIContent.none);
+        GUI.Label(new Rect(x + 10, y + 6, 116, 20), label, stLabel);
         var st = new GUIStyle(stValue) { normal = { textColor = Hex(color) } };
-        GUI.Label(new Rect(x + 10, y + 18, 110, 30), value, st);
+        GUI.Label(new Rect(x + 10, y + 24, 116, 34), value, st);
     }
 
 
@@ -631,18 +632,22 @@ public class BlockBounceGame : MonoBehaviour
     void DrawDeployPicker()
     {
         ModalBackground();
-        var r = new Rect(GW / 2f - 190, GH / 2f - 110, 380, 220);
+        float w = Mathf.Min(GW - 40, 560), h = 340;
+        var r = new Rect(GW / 2f - w / 2f, GH / 2f - h / 2f, w, h);
         GUI.Box(r, GUIContent.none);
-        GUI.Label(new Rect(r.x, r.y + 16, r.width, 28), "Deploy your balls", stModalTitle);
-        GUI.Label(new Rect(r.x + 24, r.y + 50, r.width - 48, 24), $"{s.queuedBalls} balls ready · pick how to launch", stBody);
-        if (GUI.Button(new Rect(r.x + 28, r.y + 96, 150, 90), "Aim & Shoot\n\nMouse + click")) s.ChooseAim();
-        if (GUI.Button(new Rect(r.x + r.width - 178, r.y + 96, 150, 90), "Random Spray\n\nAuto-launch")) s.ChooseRandom();
+        GUI.Label(new Rect(r.x, r.y + 22, r.width, 40), "Deploy your balls", new GUIStyle(stModalTitle) { fontSize = 30 });
+        GUI.Label(new Rect(r.x + 24, r.y + 68, r.width - 48, 30), $"{s.queuedBalls} balls ready · pick how to launch", new GUIStyle(stBody) { fontSize = 18 });
+        var btnStyle = new GUIStyle(GUI.skin.button) { fontSize = 20, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleCenter, wordWrap = true };
+        float bw = (r.width - 24 * 3) / 2f, bh = 150;
+        if (GUI.Button(new Rect(r.x + 24, r.y + 130, bw, bh), "Aim & Shoot\n\nMouse + click", btnStyle)) s.ChooseAim();
+        if (GUI.Button(new Rect(r.x + 24 * 2 + bw, r.y + 130, bw, bh), "Random Spray\n\nAuto-launch", btnStyle)) s.ChooseRandom();
     }
 
     void DrawAimHint()
     {
-        GUI.Label(new Rect(GW / 2f - 160, 100, 320, 24), "Move mouse to aim · Click to launch", stModalTitle);
-        if (GUI.Button(new Rect(GW / 2f - 90, GH - 120, 180, 30), "↻ Switch to Random Spray")) s.ChooseRandom();
+        var hintStyle = new GUIStyle(stModalTitle) { fontSize = 26 };
+        GUI.Label(new Rect(GW / 2f - 260, 100, 520, 36), "Move mouse to aim · Click to launch", hintStyle);
+        if (GUI.Button(new Rect(GW / 2f - 110, GH - 130, 220, 40), "↻ Switch to Random Spray", new GUIStyle(GUI.skin.button) { fontSize = 16 })) s.ChooseRandom();
     }
 
     // ── texture / colour utilities ──────────────────────────────────────────
